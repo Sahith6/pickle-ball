@@ -227,12 +227,14 @@ Game.prototype._update = function (dt) {
   }
 
   // ── Out of bounds ─────────────────────────────────────────────────────────
+  // Ball past player's baseline = player failed to return (player's fault).
+  // Ball past AI's baseline    = AI failed to return (AI's fault).
   if (this.ball.x < COURT_LEFT) {
-    this._fault(this.lastHitter, 'Out!');
+    this._fault(0, 'Out!');
     return;
   }
   if (this.ball.x > COURT_RIGHT) {
-    this._fault(this.lastHitter, 'Out!');
+    this._fault(1, 'Out!');
     return;
   }
 
@@ -243,33 +245,62 @@ Game.prototype._update = function (dt) {
   }
 
   // ── Ball resting on ground (rally dead — no hit received) ─────────────────
-  // If ball has been in play but has lost almost all velocity, it's a dead ball
   if (this.ball.inPlay && this.ball.vy === 0 && Math.abs(this.ball.vx) < 20) {
-    // Whoever's side the ball rests on loses the rally
     var restingSide = (this.ball.x < NET_X) ? 0 : 1;
     this._fault(restingSide, restingSide === 0 ? 'Player missed!' : 'AI missed!');
     return;
   }
 
-  // ── Hit detection ─────────────────────────────────────────────────────────
-  // Player hit
-  var playerHit = this.player.tryHit(this.ball, this.bounceState);
-  if (playerHit) {
-    this.lastHitter = 0;
-    // After player's return on serve: if bounceState was RECEIVER (player=receiver) advance to SERVER
-    if (this.bounceState === BOUNCE_STATE_RECEIVER && this.server === 1) {
-      // player returned; server (AI) must now let it bounce — but wait, serve bounce
-      // already advanced to SERVER_MUST_BOUNCE. Just mark free after AI bounces.
+  // ── Hit detection with explicit violation checks ───────────────────────────
+  var pResult = this._checkAndHit(this.player);
+  if (pResult !== 'miss') return;
+
+  this._checkAndHit(this.ai);
+};
+
+// Returns 'miss' | 'hit' | 'violation'
+Game.prototype._checkAndHit = function (player) {
+  var ball = this.ball;
+  if (!ball.inPlay || player.hitCooldown > 0) return 'miss';
+
+  var rect = player.paddleRect();
+  var bx = ball.x, by = ball.y;
+
+  if (bx + BALL_RADIUS < rect.left  || bx - BALL_RADIUS > rect.right ||
+      by + BALL_RADIUS < rect.top   || by - BALL_RADIUS > rect.bottom) return 'miss';
+
+  // Ball must be moving toward this player's side (or stationary on serve)
+  var movingToward = player.isAI ? (ball.vx > 0) : (ball.vx < 0);
+  if (!movingToward && ball.vx !== 0) return 'miss';
+
+  var isVolley = (by < GROUND_Y - BALL_RADIUS - 2);
+
+  if (isVolley) {
+    // Two-bounce rule violation
+    var twoBounceVio =
+      (player.side === 1 && this.bounceState === BOUNCE_STATE_RECEIVER) ||
+      (player.side === 0 && this.bounceState === BOUNCE_STATE_SERVER);
+    if (twoBounceVio) {
+      var who = (player.side === 0) ? 'You volleyed' : 'AI volleyed';
+      this._fault(player.side, who + ' before two-bounce rule!');
+      return 'violation';
     }
-    return;
+
+    // Kitchen / NVZ violation
+    var inKitchen = player.isAI
+      ? (player.x >= NET_X && player.x <= KITCHEN_RIGHT)
+      : (player.x >= KITCHEN_LEFT && player.x <= NET_X);
+    if (inKitchen) {
+      var who = (player.side === 0) ? 'You hit' : 'AI hit';
+      this._fault(player.side, who + ' from the Kitchen (NVZ)!');
+      return 'violation';
+    }
   }
 
-  // AI hit
-  var aiHit = this.ai.tryHit(this.ball, this.bounceState);
-  if (aiHit) {
-    this.lastHitter = 1;
-    return;
-  }
+  // Valid hit
+  player.doHit(ball);
+  this.lastHitter = player.side;
+  return 'hit';
 };
 
 // ─── Fault / scoring ─────────────────────────────────────────────────────────
