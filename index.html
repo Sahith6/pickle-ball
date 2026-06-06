@@ -2,12 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Pickleball</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <canvas id="gameCanvas" width="960" height="540"></canvas>
+  <div id="game-container">
+    <div id="canvas-wrapper">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+    </div>
+
+    <!-- Touch controls — hidden on desktop, shown on touch devices -->
+    <div id="touch-controls">
+      <div id="move-btns">
+        <button id="btn-left"  aria-label="Move left">◀</button>
+        <button id="btn-right" aria-label="Move right">▶</button>
+      </div>
+      <button id="btn-serve" aria-label="Serve / Action">SERVE</button>
+    </div>
+  </div>
 
   <script src="js/constants.js"></script>
   <script src="js/ball.js"></script>
