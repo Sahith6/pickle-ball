@@ -252,30 +252,23 @@ Game.prototype._buildNet = function () {
 Game.prototype._buildEnvironment = function () {
   var standMat = new THREE.MeshPhongMaterial({ color: 0x1e2d3d });
 
-  /* Left stand */
-  var leftStand = new THREE.Mesh(new THREE.BoxGeometry(3.5, 6, 26), standMat);
-  leftStand.position.set(-8.2, 3, 0);
+  /* Side stands: push far enough (x=±10) so they frame but don't crowd the court */
+  var leftStand = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 24), standMat);
+  leftStand.position.set(-10, 1.5, 0);
   leftStand.receiveShadow = true;
   this.scene.add(leftStand);
 
-  /* Right stand */
-  var rightStand = new THREE.Mesh(new THREE.BoxGeometry(3.5, 6, 26), standMat);
-  rightStand.position.set(8.2, 3, 0);
+  var rightStand = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 24), standMat);
+  rightStand.position.set(10, 1.5, 0);
   rightStand.receiveShadow = true;
   this.scene.add(rightStand);
 
-  /* Back wall behind AI */
+  /* Back wall behind AI (visible at far end of court) */
   var backWallMat = new THREE.MeshPhongMaterial({ color: 0x253545 });
   var backWall = new THREE.Mesh(new THREE.BoxGeometry(22, 10, 2), backWallMat);
   backWall.position.set(0, 5, -14);
   backWall.receiveShadow = true;
   this.scene.add(backWall);
-
-  /* Back wall behind player */
-  var frontWall = new THREE.Mesh(new THREE.BoxGeometry(22, 10, 2), backWallMat.clone());
-  frontWall.position.set(0, 5, 14);
-  frontWall.receiveShadow = true;
-  this.scene.add(frontWall);
 
   /* Ground plane */
   var farGround = new THREE.Mesh(
@@ -286,40 +279,43 @@ Game.prototype._buildEnvironment = function () {
   farGround.position.y = -0.05;
   this.scene.add(farGround);
 
-  /* Crowd in stands */
   this._buildCrowd();
-
-  /* Scoreboard on back wall */
   this._buildScoreboard();
 };
 
 Game.prototype._buildCrowd = function () {
-  var crowdColors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6,
-                     0x1abc9c, 0xe67e22, 0xecf0f1, 0xe91e63, 0x00bcd4];
-  var headGeo  = new THREE.SphereGeometry(0.19, 6, 4);
-  var bodyGeo  = new THREE.BoxGeometry(0.28, 0.5, 0.18);
-  var sideXs   = [-8.2, 8.2];
-  var rng      = 0;
+  var colors  = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6,
+                 0x1abc9c, 0xe67e22, 0xecf0f1, 0xe91e63, 0x00bcd4];
+  var headGeo = new THREE.SphereGeometry(0.22, 6, 4);
+  var rng     = 0;
 
-  sideXs.forEach(function (sx) {
-    for (var row = 0; row < 4; row++) {
-      for (var col = 0; col < 13; col++) {
-        var color  = crowdColors[(rng++) % crowdColors.length];
-        var headMat = new THREE.MeshPhongMaterial({ color: color });
-        var bodyMat = new THREE.MeshPhongMaterial({ color: color });
-        var head   = new THREE.Mesh(headGeo, headMat);
-        var body   = new THREE.Mesh(bodyGeo, bodyMat);
+  /*
+   * Stand tops are at y = 1.5 + 1.5 = 3.
+   * 3 bleacher rows step UP and OUTWARD above each stand top.
+   *   Row 0: closest to court (x≈±8.5), lowest (y≈3.4)
+   *   Row 1: middle          (x≈±10),   mid    (y≈4.1)
+   *   Row 2: furthest        (x≈±11.5), highest(y≈4.8)
+   */
+  var rows = [
+    { xLeft: -8.5,  xRight:  8.5,  y: 3.4 },
+    { xLeft: -10.0, xRight: 10.0,  y: 4.1 },
+    { xLeft: -11.5, xRight: 11.5,  y: 4.8 }
+  ];
 
-        var px = sx + (Math.random() - 0.5) * 0.6;
-        var pz = -11 + col * 1.85 + (Math.random() - 0.5) * 0.5;
-        var py = 1.5 + row * 0.95 + (Math.random() - 0.5) * 0.15;
+  rows.forEach(function (row) {
+    for (var col = 0; col < 13; col++) {
+      var color = colors[(rng++) % colors.length];
+      var mat   = new THREE.MeshPhongMaterial({ color: color });
+      var pz    = -10.5 + col * 1.75 + (Math.random() - 0.5) * 0.4;
+      var jitter = (Math.random() - 0.5) * 0.3;
 
-        head.position.set(px, py + 0.46, pz);
-        body.position.set(px, py, pz);
+      var headL = new THREE.Mesh(headGeo, mat);
+      headL.position.set(row.xLeft  + jitter, row.y + 0.4, pz);
+      this.scene.add(headL);
 
-        this.scene.add(head);
-        this.scene.add(body);
-      }
+      var headR = new THREE.Mesh(headGeo, mat.clone());
+      headR.position.set(row.xRight + jitter, row.y + 0.4, pz);
+      this.scene.add(headR);
     }
   }, this);
 };
@@ -378,12 +374,14 @@ Game.prototype._buildBall = function () {
 Game.prototype._buildCharacters = function () {
   var playerCfg = CHARACTERS[this.charIdx];
   this.playerMesh = createCharacter(playerCfg, false);
+  this.playerMesh.scale.setScalar(1.6);
   this.playerMesh.position.set(this.playerPos.x, 0, this.playerPos.z);
   this.scene.add(this.playerMesh);
 
   var aiCfgIdx = (this.charIdx + 1) % 4;
   var aiCfg    = CHARACTERS[aiCfgIdx];
   this.aiMesh  = createCharacter(aiCfg, true);
+  this.aiMesh.scale.setScalar(1.6);
   this.aiMesh.position.set(this.aiPos.x, 0, this.aiPos.z);
   this.scene.add(this.aiMesh);
 };
