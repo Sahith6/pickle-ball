@@ -11,10 +11,92 @@ body {
   align-items: center;
   min-height: 100vh;
   font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 8px;
+}
+
+/* ── Game container ─────────────────────────────── */
+#game-container {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Padding-bottom trick: keeps 960×540 (16:9) aspect ratio */
+#canvas-wrapper {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  height: 0;
 }
 
 #gameCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: block;
   border: 2px solid #333;
   box-shadow: 0 0 40px rgba(74, 156, 111, 0.3);
+}
+
+/* ── Touch controls ─────────────────────────────── */
+#touch-controls {
+  display: none;            /* hidden by default (desktop) */
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid #333;
+  border-top: none;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Reveal only on real touch screens */
+@media (hover: none) and (pointer: coarse) {
+  #touch-controls {
+    display: flex;
+  }
+}
+
+#move-btns {
+  display: flex;
+  gap: 10px;
+}
+
+#touch-controls button {
+  background: rgba(255, 255, 255, 0.10);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 24px;
+  width: 72px;
+  height: 60px;
+  border-radius: 12px;
+  cursor: pointer;
+  /* prevent double-tap zoom and highlight flash on iOS/Android */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background 0.08s;
+}
+
+#touch-controls button:active {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+#btn-serve {
+  background: rgba(241, 196, 15, 0.15) !important;
+  border-color: rgba(241, 196, 15, 0.45) !important;
+  color: #f1c40f !important;
+  font-size: 15px !important;
+  font-weight: bold;
+  width: 96px !important;
+  letter-spacing: 0.06em;
+}
+
+#btn-serve:active {
+  background: rgba(241, 196, 15, 0.35) !important;
 }

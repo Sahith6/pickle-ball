@@ -30,6 +30,7 @@ function Game() {
   this.aiServeTimer = 0;
 
   this._bindInput();
+  this._bindTouchControls();
   this._enterMenu();
 
   var self = this;
@@ -53,6 +54,35 @@ Game.prototype._bindInput = function () {
     if (e.code === 'KeyA' || e.code === 'ArrowLeft')  self.keys.left  = false;
     if (e.code === 'KeyD' || e.code === 'ArrowRight') self.keys.right = false;
   });
+};
+
+Game.prototype._bindTouchControls = function () {
+  var self = this;
+
+  function wire(id, onDown, onUp) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart',  function (e) { e.preventDefault(); onDown(); }, { passive: false });
+    el.addEventListener('touchend',    function (e) { e.preventDefault(); if (onUp) onUp(); }, { passive: false });
+    el.addEventListener('touchcancel', function (e) { e.preventDefault(); if (onUp) onUp(); }, { passive: false });
+    // Mouse fallback so buttons also work on desktop for testing
+    el.addEventListener('mousedown',  function () { onDown(); });
+    el.addEventListener('mouseup',    function () { if (onUp) onUp(); });
+    el.addEventListener('mouseleave', function () { if (onUp) onUp(); });
+  }
+
+  wire('btn-left',
+    function () { self.keys.left  = true;  },
+    function () { self.keys.left  = false; }
+  );
+  wire('btn-right',
+    function () { self.keys.right = true;  },
+    function () { self.keys.right = false; }
+  );
+  wire('btn-serve',
+    function () { self._onSpace(); },
+    null
+  );
 };
 
 Game.prototype._onSpace = function () {
@@ -597,4 +627,4 @@ Game.prototype._drawGameOver = function () {
 };
 
 // Kick off the game
-new Game();
+window._game = new Game();
