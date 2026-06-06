@@ -306,62 +306,65 @@ body {
 /* ---- Touch controls ---- */
 #touch-ctrl {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
+  inset: 0;
   display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  z-index: 6;
   pointer-events: none;
-}
-
-#touch-ctrl > * {
-  pointer-events: auto;
+  z-index: 6;
 }
 
 /* Auto-show touch controls on touch-only devices */
 @media (hover: none) and (pointer: coarse) {
   #touch-ctrl {
-    display: flex !important;
+    display: block !important;
   }
 }
 
+/* Left half of screen is the joystick zone */
 #stick-zone {
-  width: 120px;
-  height: 120px;
-  position: relative;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 55%;
+  height: 100%;
+  pointer-events: auto;
 }
 
+/* Joystick base appears at touch point (positioned by JS) */
 #stick-base {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
   position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   display: none;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+  margin-left: -55px;
+  margin-top: -55px;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
 }
 
 #stick-nub {
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.75);
   pointer-events: none;
-  transition: transform 0.05s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
+/* Hit button sits in the bottom-right */
 #hit-btn {
-  width: 90px;
-  height: 90px;
+  position: absolute;
+  right: 24px;
+  bottom: 70px;
+  width: 104px;
+  height: 104px;
   border-radius: 50%;
-  background: rgba(241, 196, 15, 0.25);
-  border: 3px solid rgba(241, 196, 15, 0.6);
+  background: rgba(241, 196, 15, 0.28);
+  border: 3px solid rgba(241, 196, 15, 0.75);
   color: #f1c40f;
   font-size: 1rem;
   font-weight: bold;
@@ -370,8 +373,13 @@ body {
   user-select: none;
   letter-spacing: 1px;
   transition: background 0.1s;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(241, 196, 15, 0.25);
 }
 
 #hit-btn:active {
-  background: rgba(241, 196, 15, 0.45);
+  background: rgba(241, 196, 15, 0.55);
 }

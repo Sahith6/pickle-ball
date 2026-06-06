@@ -41,7 +41,8 @@ function Game(charIdx, difficulty) {
 
   /* ---- scene & camera ---- */
   this.scene  = new THREE.Scene();
-  this.scene.background = new THREE.Color(0x0a0a1a);
+  this.scene.background = new THREE.Color(0x1a2a4a);
+  this.scene.fog = new THREE.Fog(0x1a2a4a, 40, 90);
 
   this.camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 300);
   this.camera.position.set(0, 13, 22);
@@ -100,10 +101,12 @@ function Game(charIdx, difficulty) {
    ============================================================ */
 
 Game.prototype._buildLighting = function () {
-  var ambient = new THREE.AmbientLight(0xffffff, 0.5);
-  this.scene.add(ambient);
+  /* Sky/ground hemisphere for natural ambient */
+  var hemi = new THREE.HemisphereLight(0x87ceeb, 0x2d5a1b, 0.55);
+  this.scene.add(hemi);
 
-  var dirLight = new THREE.DirectionalLight(0xfffbee, 1.3);
+  /* Main sun — casts shadows */
+  var dirLight = new THREE.DirectionalLight(0xfffbee, 1.2);
   dirLight.position.set(8, 20, 15);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width  = 2048;
@@ -115,19 +118,33 @@ Game.prototype._buildLighting = function () {
   dirLight.shadow.camera.top    =  25;
   dirLight.shadow.camera.bottom = -25;
   this.scene.add(dirLight);
+
+  /* Soft fill from the opposite side */
+  var fill = new THREE.DirectionalLight(0xadd8e6, 0.45);
+  fill.position.set(-6, 10, -10);
+  this.scene.add(fill);
+
+  /* Overhead arena lights */
+  var arena1 = new THREE.PointLight(0xfff8e7, 0.7, 30);
+  arena1.position.set(-3, 14, 3);
+  this.scene.add(arena1);
+
+  var arena2 = new THREE.PointLight(0xfff8e7, 0.7, 30);
+  arena2.position.set(3, 14, -3);
+  this.scene.add(arena2);
 };
 
 Game.prototype._buildCourt = function () {
   /* Main court surface */
   var courtGeo = new THREE.PlaneGeometry(HALF_W * 2, HALF_LEN * 2);
-  var courtMat = new THREE.MeshPhongMaterial({ color: 0x2E86AB });
+  var courtMat = new THREE.MeshPhongMaterial({ color: 0x3a7ebf, shininess: 20 });
   var court = new THREE.Mesh(courtGeo, courtMat);
   court.rotation.x = -Math.PI / 2;
   court.receiveShadow = true;
   this.scene.add(court);
 
   /* Kitchen zones */
-  var kitMat = new THREE.MeshPhongMaterial({ color: 0x1A6A8A });
+  var kitMat = new THREE.MeshPhongMaterial({ color: 0x2c6699, shininess: 20 });
   var kitGeo = new THREE.PlaneGeometry(HALF_W * 2, KIT_D);
 
   var kitPlayer = new THREE.Mesh(kitGeo, kitMat);
@@ -233,50 +250,123 @@ Game.prototype._buildNet = function () {
 };
 
 Game.prototype._buildEnvironment = function () {
-  var standMat = new THREE.MeshPhongMaterial({ color: 0x2c3e50 });
+  var standMat = new THREE.MeshPhongMaterial({ color: 0x1e2d3d });
 
   /* Left stand */
-  var leftStand = new THREE.Mesh(new THREE.BoxGeometry(3, 5, 25), standMat);
-  leftStand.position.set(-8, 2.5, 0);
+  var leftStand = new THREE.Mesh(new THREE.BoxGeometry(3.5, 6, 26), standMat);
+  leftStand.position.set(-8.2, 3, 0);
   leftStand.receiveShadow = true;
   this.scene.add(leftStand);
 
   /* Right stand */
-  var rightStand = new THREE.Mesh(new THREE.BoxGeometry(3, 5, 25), standMat);
-  rightStand.position.set(8, 2.5, 0);
+  var rightStand = new THREE.Mesh(new THREE.BoxGeometry(3.5, 6, 26), standMat);
+  rightStand.position.set(8.2, 3, 0);
   rightStand.receiveShadow = true;
   this.scene.add(rightStand);
 
   /* Back wall behind AI */
-  var backWallMat = new THREE.MeshPhongMaterial({ color: 0x34495e });
-  var backWall = new THREE.Mesh(new THREE.BoxGeometry(20, 8, 2), backWallMat);
-  backWall.position.set(0, 4, -14);
+  var backWallMat = new THREE.MeshPhongMaterial({ color: 0x253545 });
+  var backWall = new THREE.Mesh(new THREE.BoxGeometry(22, 10, 2), backWallMat);
+  backWall.position.set(0, 5, -14);
   backWall.receiveShadow = true;
   this.scene.add(backWall);
 
-  /* Ground plane beyond court */
+  /* Back wall behind player */
+  var frontWall = new THREE.Mesh(new THREE.BoxGeometry(22, 10, 2), backWallMat.clone());
+  frontWall.position.set(0, 5, 14);
+  frontWall.receiveShadow = true;
+  this.scene.add(frontWall);
+
+  /* Ground plane */
   var farGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(50, 50),
-    new THREE.MeshPhongMaterial({ color: 0x1a2e1a })
+    new THREE.PlaneGeometry(60, 60),
+    new THREE.MeshPhongMaterial({ color: 0x151f15 })
   );
   farGround.rotation.x = -Math.PI / 2;
   farGround.position.y = -0.05;
   this.scene.add(farGround);
+
+  /* Crowd in stands */
+  this._buildCrowd();
+
+  /* Scoreboard on back wall */
+  this._buildScoreboard();
+};
+
+Game.prototype._buildCrowd = function () {
+  var crowdColors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6,
+                     0x1abc9c, 0xe67e22, 0xecf0f1, 0xe91e63, 0x00bcd4];
+  var headGeo  = new THREE.SphereGeometry(0.19, 6, 4);
+  var bodyGeo  = new THREE.BoxGeometry(0.28, 0.5, 0.18);
+  var sideXs   = [-8.2, 8.2];
+  var rng      = 0;
+
+  sideXs.forEach(function (sx) {
+    for (var row = 0; row < 4; row++) {
+      for (var col = 0; col < 13; col++) {
+        var color  = crowdColors[(rng++) % crowdColors.length];
+        var headMat = new THREE.MeshPhongMaterial({ color: color });
+        var bodyMat = new THREE.MeshPhongMaterial({ color: color });
+        var head   = new THREE.Mesh(headGeo, headMat);
+        var body   = new THREE.Mesh(bodyGeo, bodyMat);
+
+        var px = sx + (Math.random() - 0.5) * 0.6;
+        var pz = -11 + col * 1.85 + (Math.random() - 0.5) * 0.5;
+        var py = 1.5 + row * 0.95 + (Math.random() - 0.5) * 0.15;
+
+        head.position.set(px, py + 0.46, pz);
+        body.position.set(px, py, pz);
+
+        this.scene.add(head);
+        this.scene.add(body);
+      }
+    }
+  }, this);
+};
+
+Game.prototype._buildScoreboard = function () {
+  /* Board panel */
+  var boardMat = new THREE.MeshPhongMaterial({ color: 0x0a0a0a });
+  var board = new THREE.Mesh(new THREE.BoxGeometry(6, 2.4, 0.15), boardMat);
+  board.position.set(0, 7.5, -14);
+  this.scene.add(board);
+
+  /* Coloured score strips */
+  var blueStrip = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 1.8, 0.16),
+    new THREE.MeshPhongMaterial({ color: 0x1a4a8a })
+  );
+  blueStrip.position.set(-1.4, 7.5, -13.93);
+  this.scene.add(blueStrip);
+
+  var redStrip = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 1.8, 0.16),
+    new THREE.MeshPhongMaterial({ color: 0x8a1a1a })
+  );
+  redStrip.position.set(1.4, 7.5, -13.93);
+  this.scene.add(redStrip);
 };
 
 Game.prototype._buildBall = function () {
-  var ballGeo = new THREE.SphereGeometry(BALL_R, 12, 8);
-  var ballMat = new THREE.MeshPhongMaterial({ color: 0xf5e642 });
+  /* Slightly over-sized sphere so the ball is easy to see */
+  var ballGeo = new THREE.SphereGeometry(BALL_R * 1.5, 16, 12);
+  var ballMat = new THREE.MeshStandardMaterial({
+    color: 0xffee00,
+    roughness: 0.25,
+    metalness: 0.05,
+    emissive: 0xffee00,
+    emissiveIntensity: 0.18
+  });
   this.ballMesh = new THREE.Mesh(ballGeo, ballMat);
   this.ballMesh.castShadow = true;
   this.scene.add(this.ballMesh);
 
   /* Shadow disc */
-  var shadowGeo = new THREE.CircleGeometry(0.15, 12);
+  var shadowGeo = new THREE.CircleGeometry(0.22, 16);
   var shadowMat = new THREE.MeshBasicMaterial({
     color: 0x000000,
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.4,
     depthWrite: false
   });
   this.ballShadow = new THREE.Mesh(shadowGeo, shadowMat);
@@ -332,25 +422,52 @@ Game.prototype._bindInput = function () {
 };
 
 Game.prototype._bindTouchControls = function () {
-  var self = this;
+  var self      = this;
   var stickZone = document.getElementById('stick-zone');
   var stickBase = document.getElementById('stick-base');
   var stickNub  = document.getElementById('stick-nub');
   var hitBtn    = document.getElementById('hit-btn');
 
   var startX = 0, startY = 0;
+  var activeTouchId = null;
+  var MAX_DIST = 72;
+
+  function updateStick(clientX, clientY) {
+    var dx   = clientX - startX;
+    var dy   = clientY - startY;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > MAX_DIST) {
+      dx = (dx / dist) * MAX_DIST;
+      dy = (dy / dist) * MAX_DIST;
+      dist = MAX_DIST;
+    }
+
+    stickNub.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    self.joystick.x = dx / MAX_DIST;
+    self.joystick.z = dy / MAX_DIST;
+  }
+
+  function resetStick() {
+    activeTouchId = null;
+    stickBase.style.display = 'none';
+    stickNub.style.transform = 'translate(0,0)';
+    self.joystick.x = 0;
+    self.joystick.z = 0;
+  }
 
   stickZone.addEventListener('touchstart', function (e) {
     e.preventDefault();
+    if (activeTouchId !== null) return;
     var t = e.changedTouches[0];
-    var rect = stickZone.getBoundingClientRect();
-    startX = t.clientX - rect.left;
-    startY = t.clientY - rect.top;
+    activeTouchId = t.identifier;
 
+    /* Place joystick base at the touch point (touch-ctrl starts at 0,0 of viewport) */
+    startX = t.clientX;
+    startY = t.clientY;
+    stickBase.style.left = startX + 'px';
+    stickBase.style.top  = startY + 'px';
     stickBase.style.display = 'flex';
-    stickBase.style.left = (startX - 40) + 'px';
-    stickBase.style.top  = (startY - 40) + 'px';
-
     stickNub.style.transform = 'translate(0,0)';
     self.joystick.x = 0;
     self.joystick.z = 0;
@@ -358,35 +475,28 @@ Game.prototype._bindTouchControls = function () {
 
   stickZone.addEventListener('touchmove', function (e) {
     e.preventDefault();
-    var t = e.changedTouches[0];
-    var rect = stickZone.getBoundingClientRect();
-    var cx = t.clientX - rect.left;
-    var cy = t.clientY - rect.top;
-
-    var dx = cx - startX;
-    var dy = cy - startY;
-    var dist = Math.sqrt(dx * dx + dy * dy);
-    var maxDist = 50;
-
-    if (dist > maxDist) {
-      dx = dx / dist * maxDist;
-      dy = dy / dist * maxDist;
-      dist = maxDist;
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      var t = e.changedTouches[i];
+      if (t.identifier === activeTouchId) {
+        updateStick(t.clientX, t.clientY);
+        break;
+      }
     }
-
-    stickNub.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
-
-    self.joystick.x = dx / maxDist;
-    /* Screen Y up (negative dy) = moving toward net = 3D -Z direction */
-    self.joystick.z = dy / maxDist;
   }, { passive: false });
 
   stickZone.addEventListener('touchend', function (e) {
     e.preventDefault();
-    stickBase.style.display = 'none';
-    stickNub.style.transform = 'translate(0,0)';
-    self.joystick.x = 0;
-    self.joystick.z = 0;
+    for (var i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === activeTouchId) {
+        resetStick();
+        break;
+      }
+    }
+  }, { passive: false });
+
+  stickZone.addEventListener('touchcancel', function (e) {
+    e.preventDefault();
+    resetStick();
   }, { passive: false });
 
   hitBtn.addEventListener('touchstart', function (e) {
@@ -534,7 +644,19 @@ Game.prototype._doHit = function (fromX, fromZ, towardPositiveZ, isAI) {
 
   this.ball.vz = direction * speed;
   this.ball.vy = 4 + arcFactor * 6;
-  this.ball.vx = -fromX * 0.4 + (Math.random() - 0.5) * (isAI ? this.aiSettings.accuracy : 1.2);
+
+  if (isAI) {
+    /* AI aims based on difficulty: easy sends it toward center, hard aims corners */
+    this.ball.vx = -fromX * 0.4 + (Math.random() - 0.5) * this.aiSettings.accuracy * 3;
+  } else {
+    /* Player aims with joystick X (or A/D keys): negative = opponent's left, positive = right */
+    var aimX = this.joystick.x;
+    if (this.keys.left)  aimX -= 1;
+    if (this.keys.right) aimX += 1;
+    aimX = Math.max(-1, Math.min(1, aimX));
+    this.ball.vx = aimX * 3.8 + (Math.random() - 0.5) * 0.5;
+  }
+
   this.ball.hitCooldown = 0.4;
 };
 
