@@ -5,98 +5,373 @@
 }
 
 body {
-  background: #0d0d1a;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  padding: 8px;
-}
-
-/* ── Game container ─────────────────────────────── */
-#game-container {
-  width: 100%;
-  max-width: 960px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Padding-bottom trick: keeps 960×540 (16:9) aspect ratio */
-#canvas-wrapper {
-  position: relative;
-  width: 100%;
-  padding-bottom: 56.25%;
-  height: 0;
+  background: #0a0a1a;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 #gameCanvas {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   display: block;
-  border: 2px solid #333;
-  box-shadow: 0 0 40px rgba(74, 156, 111, 0.3);
 }
 
-/* ── Touch controls ─────────────────────────────── */
-#touch-controls {
-  display: none;            /* hidden by default (desktop) */
-  width: 100%;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid #333;
-  border-top: none;
-  justify-content: space-between;
+/* ---- Overlay ---- */
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 10;
 }
 
-/* Reveal only on real touch screens */
+.screen {
+  max-width: 420px;
+  width: 90%;
+  padding: 24px;
+}
+
+/* ---- Menu titles ---- */
+.game-title {
+  font-size: 3rem;
+  color: #f1c40f;
+  text-align: center;
+  margin: 0;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(241, 196, 15, 0.4);
+}
+
+.game-sub {
+  color: #aaa;
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.section-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 16px 0 8px;
+}
+
+/* ---- Character grid ---- */
+#char-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.char-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 10px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.char-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.char-card.selected {
+  border-color: #f1c40f;
+  background: rgba(241, 196, 15, 0.12);
+}
+
+.char-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: white;
+}
+
+.char-name {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.char-tag {
+  color: #aaa;
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+/* ---- Difficulty row ---- */
+#diff-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.diff-btn {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.diff-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.diff-btn.active {
+  border-color: #f1c40f;
+  color: #f1c40f;
+  background: rgba(241, 196, 15, 0.12);
+}
+
+/* ---- Play button ---- */
+#play-btn {
+  width: 100%;
+  padding: 16px;
+  background: #f1c40f;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  color: #000;
+  margin-top: 8px;
+  letter-spacing: 2px;
+  transition: transform 0.1s, background 0.1s;
+}
+
+#play-btn:hover {
+  background: #f4d03f;
+  transform: translateY(-1px);
+}
+
+#play-btn:active {
+  transform: translateY(0);
+}
+
+/* ---- Game-over screen ---- */
+#over-screen {
+  text-align: center;
+}
+
+#over-result {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+#over-score {
+  font-size: 1.5rem;
+  color: white;
+  margin-bottom: 24px;
+}
+
+#replay-btn,
+#menu-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: transform 0.1s, opacity 0.1s;
+}
+
+#replay-btn:hover,
+#menu-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+#replay-btn {
+  background: #f1c40f;
+  color: #000;
+}
+
+#menu-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* ---- HUD ---- */
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 5;
+}
+
+#hud-left,
+#hud-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hud-score {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: bold;
+  min-width: 32px;
+  text-align: center;
+  line-height: 1;
+}
+
+#hud-center {
+  color: #f1c40f;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ---- Floating message ---- */
+#float-msg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #f1c40f;
+  font-size: 1.4rem;
+  font-weight: bold;
+  padding: 14px 28px;
+  border-radius: 12px;
+  z-index: 8;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---- Bounce hint ---- */
+#bounce-hint {
+  position: fixed;
+  bottom: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  z-index: 7;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---- Touch controls ---- */
+#touch-ctrl {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+#touch-ctrl > * {
+  pointer-events: auto;
+}
+
+/* Auto-show touch controls on touch-only devices */
 @media (hover: none) and (pointer: coarse) {
-  #touch-controls {
-    display: flex;
+  #touch-ctrl {
+    display: flex !important;
   }
 }
 
-#move-btns {
-  display: flex;
-  gap: 10px;
+#stick-zone {
+  width: 120px;
+  height: 120px;
+  position: relative;
 }
 
-#touch-controls button {
-  background: rgba(255, 255, 255, 0.10);
-  border: 2px solid rgba(255, 255, 255, 0.22);
-  color: #fff;
-  font-size: 24px;
-  width: 72px;
-  height: 60px;
-  border-radius: 12px;
-  cursor: pointer;
-  /* prevent double-tap zoom and highlight flash on iOS/Android */
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  transition: background 0.08s;
+#stick-base {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: absolute;
+  display: none;
+  align-items: center;
+  justify-content: center;
 }
 
-#touch-controls button:active {
-  background: rgba(255, 255, 255, 0.28);
+#stick-nub {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  transition: transform 0.05s;
 }
 
-#btn-serve {
-  background: rgba(241, 196, 15, 0.15) !important;
-  border-color: rgba(241, 196, 15, 0.45) !important;
-  color: #f1c40f !important;
-  font-size: 15px !important;
+#hit-btn {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(241, 196, 15, 0.25);
+  border: 3px solid rgba(241, 196, 15, 0.6);
+  color: #f1c40f;
+  font-size: 1rem;
   font-weight: bold;
-  width: 96px !important;
-  letter-spacing: 0.06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  letter-spacing: 1px;
+  transition: background 0.1s;
 }
 
-#btn-serve:active {
-  background: rgba(241, 196, 15, 0.35) !important;
+#hit-btn:active {
+  background: rgba(241, 196, 15, 0.45);
 }
